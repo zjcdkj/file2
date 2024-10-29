@@ -1,6 +1,7 @@
-import mongoose from 'mongoose';
+import mongoose, { Schema } from 'mongoose';
+import { IFolder } from '@/types';
 
-const FolderSchema = new mongoose.Schema({
+const FolderSchema = new Schema<IFolder>({
     name: {
         type: String,
         required: true,
@@ -11,8 +12,7 @@ const FolderSchema = new mongoose.Schema({
         required: true
     },
     parentId: {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: 'Folder',
+        type: String,
         default: null
     },
     createdAt: {
@@ -25,4 +25,6 @@ const FolderSchema = new mongoose.Schema({
     }
 });
 
-export default mongoose.models.Folder || mongoose.model('Folder', FolderSchema); 
+const Folder = mongoose.models.Folder || mongoose.model<IFolder>('Folder', FolderSchema);
+
+export default Folder; 

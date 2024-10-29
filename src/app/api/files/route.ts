@@ -1,29 +1,14 @@
 import { NextResponse } from 'next/server';
-import connectDB from '@/lib/db';
-import File from '@/models/File';
-import minioClient from '@/lib/minio';
-import { v4 as uuidv4 } from 'uuid';
+import { fileService } from '@/services/fileService';
 
-// 添加文件类型定义
-interface UploadedFile {
-  name: string;
-  type: string;
-  size: number;
-  arrayBuffer(): Promise<ArrayBuffer>;
-}
-
-// 获取文件列表
 export async function GET(request: Request) {
   try {
-    await connectDB();
     const { searchParams } = new URL(request.url);
     const folderId = searchParams.get('folderId');
-    
-    const query = folderId ? { folderId } : {};
-    const files = await File.find(query).sort({ createdAt: -1 });
-    
+    const files = await fileService.getFiles(folderId || undefined);
     return NextResponse.json(files);
   } catch (error) {
+    console.error('Get files error:', error);
     return NextResponse.json(
       { error: '获取文件列表失败' },
       { status: 500 }
@@ -31,12 +16,10 @@ export async function GET(request: Request) {
   }
 }
 
-// 上传文件
 export async function POST(request: Request) {
   try {
-    await connectDB();
     const formData = await request.formData();
-    const file = formData.get('file') as unknown as UploadedFile;
+    const file = formData.get('file') as File;
     const folderId = formData.get('folderId') as string;
 
     if (!file) {
@@ -47,38 +30,17 @@ export async function POST(request: Request) {
     }
 
     const buffer = Buffer.from(await file.arrayBuffer());
-    const fileName = `${uuidv4()}-${file.name}`;
-    const bucketName = process.env.MINIO_BUCKET_NAME || 'files';
-
-    // 确保 bucket 存在
-    const bucketExists = await minioClient.bucketExists(bucketName);
-    if (!bucketExists) {
-      await minioClient.makeBucket(bucketName);
-    }
-
-    // 上传到 MinIO
-    await minioClient.putObject(
-      bucketName,
-      fileName,
+    const uploadedFile = await fileService.uploadFile(
       buffer,
-      buffer.length,
-      {
-        'Content-Type': file.type,
-      }
+      file.name,
+      file.type,
+      file.size,
+      folderId
     );
 
-    // 保存文件信息到数据库
-    const fileDoc = await File.create({
-      name: fileName,
-      originalName: file.name,
-      mimeType: file.type,
-      size: file.size,
-      path: `/${bucketName}/${fileName}`,
-      folderId
-    });
-
-    return NextResponse.json(fileDoc);
+    return NextResponse.json(uploadedFile);
   } catch (error) {
+    console.error('Upload error:', error);
     return NextResponse.json(
       { error: '文件上传失败' },
       { status: 500 }

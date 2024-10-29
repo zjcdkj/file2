@@ -1,6 +1,7 @@
-import mongoose from 'mongoose';
+import mongoose, { Schema } from 'mongoose';
+import { IFile } from '@/types';
 
-const FileSchema = new mongoose.Schema({
+const FileSchema = new Schema<IFile>({
     name: {
         type: String,
         required: true,
@@ -23,9 +24,9 @@ const FileSchema = new mongoose.Schema({
         required: true
     },
     folderId: {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: 'Folder',
-        required: true
+        type: String,
+        required: true,
+        default: 'root'
     },
     createdAt: {
         type: Date,
@@ -37,4 +38,6 @@ const FileSchema = new mongoose.Schema({
     }
 });
 
-export default mongoose.models.File || mongoose.model('File', FileSchema); 
+const File = mongoose.models.File || mongoose.model<IFile>('File', FileSchema);
+
+export default File; 
