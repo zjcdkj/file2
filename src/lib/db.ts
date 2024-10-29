@@ -1,0 +1,1 @@
+npm install mongoose @mantine/core @mantine/hooks @mantine/dropzone @emotion/react axios react-query react-icons minio 
